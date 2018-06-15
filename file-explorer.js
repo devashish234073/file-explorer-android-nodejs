@@ -3,6 +3,9 @@ var http = require("http");
 var exec = require('child_process').exec;
 
 function getMIMEType(format){
+    if(format==="xslt") {
+        format="xsl";   
+    }
     if(format==="jpg" || format==="jpeg" || format==="png"){
         return "image/"+format;
     } else if(format==="mp3" || format==="wav"){
