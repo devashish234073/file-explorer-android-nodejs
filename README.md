@@ -15,3 +15,6 @@ The second image shows the function that handles different formats. It can be ch
 
 ### For accessing from PC. Connect the phone and PC with same wifi and replace localhost in "http://localhost:8888" with phones IP address.
 Which can be found by running "ipconfig" in "termux" application [from play store].
+
+#### New UI after update : [also added search functionality]
+![new_ui](https://user-images.githubusercontent.com/20777854/41619821-369f67a8-7425-11e8-9fd0-681feed772a8.png)
