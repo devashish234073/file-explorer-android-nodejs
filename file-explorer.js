@@ -1,10 +1,12 @@
-var fs = require("fs");
-var http = require("http");
-var exec = require('child_process').exec;
+var fs   = require('fs');
+var http = require('http');
+var PORT = 8888;
+tree     = [];
+var sep  = "__##_#";
 
 function getMIMEType(format){
-    if(format==="xslt") {
-        format="xsl";   
+    if(format === "xslt") {
+        format = "xsl";
     }
     if(format==="jpg" || format==="jpeg" || format==="png"){
         return "image/"+format;
@@ -17,64 +19,246 @@ function getMIMEType(format){
     }
 }
 
-var server = http.createServer((req,res)=>{
-    if(req.url.indexOf(".")<0){
-        res.write("<html>");
-        res.write("<head>");
-        res.write("<meta name='viewport' content='width=device-width version=1.0'>");
-        res.write("<style>");
-        res.write(`.folder{
-            display:block;
-            text-decoration:none;
-            background-color:gold;
-            color:green;
-            border:1px solid goldenrod;
-            padding:4px;
+function scanDir(u){
+    var ls=[];
+    try{
+        ls=fs.readdirSync(u+"/");
+    } catch(e){
+        return;
+    }
+    for(var i=0;i<ls.length;i++){
+        if(ls[i].indexOf(".")===0){
+            continue;
         }
-        .files{
-            display:block;
-            text-decoration:none;
-            background-color:lemonchiffon;
-            color:lightcoral;
-            border:1px solid goldenrod;
-            padding:4px;
+        if(tree[u]===undefined){
+            tree[u]=[ls[i]];
+        } else {
+            tree[u].push(ls[i]);
         }
-        `);
-        res.write("</style></head>");
-        exec("ls ."+req.url,(err,out)=>{
-            var lines=out.split("\n");
-            for(var i=0;i<lines.length;i++){
-                var classInfo="class='files' ";
-                if(lines[i].indexOf(".")<0){
-                    classInfo="class='folder' ";
-                }
-                if(lines[i].trim()!=="") {
-                    if(req.url==="/"){
-                        res.write("<a "+classInfo+"href='/"+lines[i]+"'>"+lines[i]+"</a>");
-                    } else {
-                        res.write("<a "+classInfo+"href='"+req.url+"/"+lines[i]+"'>"+lines[i]+"</a>");
-                    }
-                }
+        scanDir(u+"/"+ls[i]);
+    }
+}
+
+function URL2Key(u){
+    u=u.trim();
+    u=u.replace(/%20/g," ");
+    if(u.indexOf(".")!==0){
+        u="."+u;
+    }
+    if(u.length>0){
+        if(u[u.length-1]==="/"){
+            u=u.substr(0,u.length-1);
+        }
+    }
+    u=u.trim();
+    return u;
+}
+
+function find(txt){
+    var reslts=[];
+    for(k in tree){
+        var l = tree[k];
+        for(var i=0;i<l.length;i++){
+            if(l[i].indexOf(txt)>-1){
+                reslts.push(k+sep+l[i]);
             }
-            res.end("");
-        });
-    } else {
-        var arr=req.url.split(".");
-        var format="text/html";
-        if(arr.length===2){
-            format=getMIMEType(arr[1].trim());
         }
-        var fName="."+req.url;
-        fName=fName.replace(/%20/g," ");
-        fs.readFile(fName,(err,data)=>{
-            if(!err){
-                res.writeHead(200,{"Content-Type":format});
-                res.end(data);
+    }
+    return reslts;
+}
+
+function getFormat(fName){
+    if(fName.indexOf(".")>0){
+        var tmp=fName.split(".");
+        if(tmp.length>1){
+            return tmp[tmp.length-1];
+        }
+    }
+    return null;
+}
+
+function breakURL(u){
+    var path   = u;
+    var fName  = null;
+    var format = null;
+    var v=u.replace("./",sep);
+    if(v.indexOf("/")===-1){
+        format=getFormat(v);
+        if(format!==null){
+            return {"path":"./","fName":v.replace(sep,""),"format":format};
+        }
+        return {"path":path,"fName":fName,"format":format};
+    }
+    v=v.split("/");
+    if(v.length>1){
+        path="";
+        fName=v[v.length-1];
+        format=getFormat(fName);
+        for(var i=0;i<v.length-1;i++){
+            path+=v[i];
+            if(i!=v.length-2){
+                path+="/";
+            }
+        }
+        path=path.replace(sep,"./");
+    }
+    return {"path":path,"fName":fName,"format":format};
+}
+
+function init(){
+    tree=[];
+    scanDir(".");
+}
+
+function fetch(u){
+    var ret=tree[u];
+    if(ret===undefined){
+        var obj=breakURL(u);
+        if(obj.fName!=null){
+            ret=tree[URL2Key(obj.path)];
+            if(ret===undefined){
+                return {"type":"err"," msg":"File '"+obj.fName+"' not found in '"+obj.path+"'"};
             } else {
-                res.end("Unable to read file '"+req.url+"'");
+                var data=fs.readFileSync(u);
+                return {"type":"file","format":obj.format,"content":data};
             }
-        });
+        } else {
+            return {"type":"err"," msg":"Unable to open '"+u+"' directory"};
+        }
+    } else {
+        return {"type":"folder","content":ret};
+    }
+}
+
+function getBasicForm() {
+    var ret = `<html>
+    <meta name="viewport" content="width=device-width version=1.0">
+    <head>
+    <style>
+    input[type='button'],input[type='text']{
+        display:block;
+        text-decoration:none;
+        padding:4px;
+        border:1px solid goldenrod;
+        width:98%;
+        border-top-left-radius:15px;
+        border-top-right-radius:15px;
+        border-bottom-left-radius:15px;
+        border-bottom-right-radius:15px;
+    }
+    input[type='text']{
+        padding-left:12px;
+    }
+    .file{
+        background-color:bisque;
+        color:hotpink;
+    }
+    .folder{
+        background-color:gold;
+        color:green;   
+    } 
+    .diff{
+        background-color:darkorchid;
+        color:white;
+    }
+    </style>
+    </head>`;
+    return ret;
+}
+
+function folderResp(folders,url){
+    var ret=getBasicForm();
+    ret+=`<body>
+    <form method="GET" action="SearchFileExplorer">
+    <input type="text" name="searchTxt" placeholder="Search">
+    </form>
+    <form class="mainForm" method="POST">`;
+    ret+="<input type='button' class='diff' onclick='doSubmit(\"/\")' value='"+"[Home]"+"'>";
+    var className = "";
+    for(var i=0;i<folders.length;i++){
+        if(folders[i].indexOf(".")>0){
+            className = "file";
+        } else {
+            className = "folder";
+        }
+        ret+="<input class='"+className+"' type='button' onclick='doSubmit(\""+(url==="/"?"":url)+"/"+folders[i]+"\")' value='"+folders[i]+"'>";
+    }
+    ret+=`
+    </form>
+    <script>
+        function doSubmit(action) {
+            var form = document.querySelector(".mainForm");
+            form.setAttribute("action",action);
+            form.submit();
+        }
+    </script>
+    `;
+    ret+="</body></html>";
+    return ret;
+}
+
+function srchResultResp(srchRslt) {
+    if(srchRslt.length==0){
+        return "No file matched the search text.";
+    }
+    var ret=getBasicForm();
+    ret+="<body><form class='mainForm' method='POST'>";
+    for(var i=0;i<srchRslt.length;i++) {
+        var tmp = srchRslt[i].split(sep);
+        var path = tmp[0];
+        var file = tmp[1];
+        ret+="<input type='button' title='"+path+"' value='"+file+"' onclick='doSubmit(\""+path+"\")'>";
+    }
+    ret+=`
+    </form>
+    <script>
+        function doSubmit(action) {
+            var form = document.querySelector(".mainForm");
+            form.setAttribute("action",action);
+            form.submit();
+        }
+    </script>`;
+    ret+="</body></html>";
+    return ret;
+}
+
+init();
+
+var server = http.createServer((req,res)=>{
+    var origURL=req.url;
+    if(origURL.indexOf("/SearchFileExplorer")>-1){
+        var tmp = origURL.split("?");
+        if(tmp.length===2){
+            var srch = tmp[1];
+            srch = srch.split("=");
+            if(srch.length===2){
+                srch = srch[1];
+                var srchRslt = find(srch);
+                res.end(srchResultResp(srchRslt));
+            } else {
+                res.end("Unable to parse request url");
+            }
+        } else {
+            res.end("Unable to parse request url");
+        }
+    } else if(req.url!=="/favicon.ico"){
+        var url=URL2Key(origURL);
+        var ret=fetch(url);
+        if(ret.type==="folder"){
+            ret=folderResp(ret.content,origURL);
+        } else if(ret.type==="file"){
+            var f=ret.format;
+            if(f!==null){
+                var mime=getMIMEType(f);
+                res.writeHead(200,{"Content-Type":mime});
+            }
+            ret=ret.content;
+        } else {
+            ret=JSON.stringify(ret);
+        }
+        res.end(ret);
     }
 });
 
-server.listen(8888);
+server.listen(PORT);
+console.log("Server started at PORT:"+PORT);
