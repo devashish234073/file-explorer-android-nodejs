@@ -1,5 +1,8 @@
 # file-explorer-android-nodejs
 
+## New Update: added ajax-file-explorer.js which presents a tree like structure:
+![image](https://user-images.githubusercontent.com/20777854/42010994-ec55819c-7aae-11e8-87f5-a4a66f07ce38.png)
+
 This app can help open formats supported in browser which can not be open from the file manager app.
 For example not all file manager opens "xml" files in browser. Hence can't do xml development in phone.
 #### This application lets one open "xml", "xslt", "js", "css", "html", "json", "avi", "mp3", "mp4", "jpg", "png", etc all in browser.
