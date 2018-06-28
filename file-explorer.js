@@ -166,14 +166,33 @@ function getBasicForm() {
     return ret;
 }
 
+function getLastURL(url){
+    var backURL="/";
+    if(url!=="/"){
+        var ndx=url.length-1;
+        while(ndx>0 && url[ndx]!=="/"){
+            ndx--;
+        }
+        if(url[ndx]==="/"){
+            backURL=url.substr(0,ndx);
+        }
+        if(ndx===0){
+            backURL="/";
+        }
+    }
+    return backURL;
+}
+
 function folderResp(folders,url){
     var ret=getBasicForm();
     ret+=`<body>
     <form method="GET" action="SearchFileExplorer">
     <input type="text" name="searchTxt" placeholder="Search">
     </form>
-    <form class="mainForm" method="POST">`;
+    <form class="mainForm" method="GET">`;
     ret+="<input type='button' class='diff' onclick='doSubmit(\"/\")' value='"+"[Home]"+"'>";
+    var backURL=getLastURL(url);
+    ret+="<input type='button' class='diff' onclick='doSubmit(\""+backURL+"\")' value='"+"[Back]"+"'>";
     var className = "";
     for(var i=0;i<folders.length;i++){
         if(folders[i].indexOf(".")>0){
@@ -242,6 +261,8 @@ var server = http.createServer((req,res)=>{
             res.end("Unable to parse request url");
         }
     } else if(req.url!=="/favicon.ico"){
+        
+origURL=origURL.replace("?","");
         var url=URL2Key(origURL);
         var ret=fetch(url);
         if(ret.type==="folder"){
@@ -257,6 +278,9 @@ var server = http.createServer((req,res)=>{
             ret=JSON.stringify(ret);
         }
         res.end(ret);
+    }
+ else {
+        res.end("<a href='./'>Unexpected Err. Go Home</a>");
     }
 });
 
