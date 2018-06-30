@@ -84,6 +84,39 @@ form.submit();
 
 _{dirs}
 
+<script>
+var folders = document.querySelectorAll(".folder");
+function createTimer(folder,time){
+
+    var cnt = 0;
+    var orig = folder.value;
+    function inner(){
+        var tmr=setInterval(()=>{
+            cnt++;
+            if(cnt<=10){
+                folder.value=" "+folder.value;
+            } else if(cnt<=20){
+                folder.value=folder.value.substr(1);
+            } else {
+                folder.value=orig;
+                clearInterval(tmr);
+            }
+        },time);
+
+    }
+
+    return inner;
+
+}
+for(var i=0;i<folders.length;i++){
+
+    var folder = folders[i];
+
+    createTimer(folder,(i+1)*10)();
+
+}
+</script>
+
 </form>
 
 </body>
