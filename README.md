@@ -1,5 +1,6 @@
 # file-explorer-android-nodejs
 
+## New Update: added animation of folder names in the home page launch
 ## New Update: added ajax-file-explorer.js which presents a tree like structure:
 ![scren](https://user-images.githubusercontent.com/20777854/42042363-a2ce809c-7b11-11e8-9975-1e4c00785774.png)
 
